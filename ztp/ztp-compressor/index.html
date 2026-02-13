@@ -3,25 +3,137 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ZTP 加密器 - 新年快乐</title>
+<title>ZTP 加密器 - 新年版</title>
 <script src="https://unpkg.com/jszip@3.10.1/dist/jszip.min.js"></script>
 <script src="https://unpkg.com/file-saver@2.0.5/dist/FileSaver.min.js"></script>
 <script src="https://unpkg.com/crypto-js@4.2.0/crypto-js.min.js"></script>
 <style>
-*{margin:0;padding:0;box-sizing:border-box;font-family:system-ui,sans-serif}
-body{background:#fff0f0;padding:20px;max-width:500px;margin:0 auto}
-.card{background:#fff;border-radius:16px;padding:20px;margin-bottom:16px;box-shadow:0 4px 12px rgba(255,0,0,.08)}
-.title{font-size:18px;font-weight:700;color:#d92c2c;margin-bottom:12px}
-.area{border:2px dashed #ffb3b3;border-radius:12px;padding:28px 10px;text-align:center;color:#666;margin-bottom:12px}
-.area input{display:none}
-.btn{background:#d92c2c;color:#fff;border:none;border-radius:10px;padding:12px;width:100%;font-size:15px;font-weight:600;margin-top:6px}
-.pwd{width:100%;padding:10px 12px;border:1px solid #ffcccc;border-radius:10px;margin-bottom:10px}
-.progress{height:6px;background:#ffd6d6;border-radius:3px;overflow:hidden;margin:10px 0}
-.bar{height:100%;background:#d92c2c;width:0;transition:.2s}
-.status{font-size:14px;color:#666}
+:root {
+  --bg: #fff0f0;
+  --card: #ffffff;
+  --text: #222;
+  --muted: #666;
+  --border: #ffcccc;
+  --main: #d92c2c;
+  --progress: #ffd6d6;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #1a1111;
+    --card: #2c1a1a;
+    --text: #f0f0f0;
+    --muted: #ccc;
+    --border: #552a2a;
+    --main: #b32424;
+    --progress: #442222;
+  }
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  font-family: system-ui, sans-serif;
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  padding: 20px;
+  max-width: 500px;
+  margin: 0 auto;
+  transition: background 0.3s, color 0.3s;
+}
+
+.card {
+  background: var(--card);
+  border-radius: 16px;
+  padding: 20px;
+  margin-bottom: 16px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+
+.title {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--main);
+  margin-bottom: 12px;
+}
+
+.area {
+  border: 2px dashed var(--border);
+  border-radius: 12px;
+  padding: 28px 10px;
+  text-align: center;
+  color: var(--muted);
+  margin-bottom: 12px;
+  cursor: pointer;
+}
+
+.area input {
+  display: none;
+}
+
+.btn {
+  background: var(--main);
+  color: #fff;
+  border: none;
+  border-radius: 10px;
+  padding: 12px;
+  width: 100%;
+  font-size: 15px;
+  font-weight: 600;
+  margin-top: 6px;
+  cursor: pointer;
+}
+
+.pwd {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: transparent;
+  color: var(--text);
+  margin-bottom: 10px;
+  outline: none;
+}
+
+.progress {
+  height: 6px;
+  background: var(--progress);
+  border-radius: 3px;
+  overflow: hidden;
+  margin: 10px 0;
+}
+
+.bar {
+  height: 100%;
+  background: var(--main);
+  width: 0;
+  transition: width 0.2s;
+}
+
+.status {
+  font-size: 14px;
+  color: var(--muted);
+}
+
+.themeBtn {
+  background: var(--card);
+  color: var(--main);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 6px 10px;
+  font-size: 14px;
+  cursor: pointer;
+  margin-bottom: 12px;
+}
 </style>
 </head>
+
 <body>
+<button class="themeBtn" id="toggleTheme">切换暗色/亮色</button>
 
 <div class="card">
   <div class="title">🧧 新年版 ZTP 加密器</div>
@@ -52,6 +164,13 @@ const MAGIC = "ZTPv2-ZETA";
 const XOR_KEY = 0x9D;
 const DEFAULT_PWD = "123456";
 
+let darkMode = false;
+
+document.getElementById("toggleTheme").onclick = () => {
+  darkMode = !darkMode;
+  document.body.style.background = darkMode ? "#1a1111" : "#fff0f0";
+};
+
 function setBar(id, v) {
   document.getElementById(id).style.width = Math.min(100, v) + "%";
 }
@@ -81,7 +200,6 @@ document.getElementById("doZip").onclick = async () => {
   const files = Array.from(document.getElementById("zipFiles").files);
   const pwd = document.getElementById("zipPwd").value || DEFAULT_PWD;
   const log = document.getElementById("zipLog");
-  const bar = document.getElementById("zipBar");
   if (!files.length) return log.textContent = "请选择文件";
   log.textContent = "打包中...";
   setBar("zipBar", 20);
