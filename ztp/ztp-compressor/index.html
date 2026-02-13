@@ -18,16 +18,14 @@
   --progress: #ffd6d6;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --bg: #1a1111;
-    --card: #2c1a1a;
-    --text: #f0f0f0;
-    --muted: #ccc;
-    --border: #552a2a;
-    --main: #b32424;
-    --progress: #442222;
-  }
+html.dark {
+  --bg: #1a1111;
+  --card: #2c1a1a;
+  --text: #f0f0f0;
+  --muted: #ccc;
+  --border: #552a2a;
+  --main: #b32424;
+  --progress: #442222;
 }
 
 * {
@@ -43,7 +41,7 @@ body {
   padding: 20px;
   max-width: 500px;
   margin: 0 auto;
-  transition: background 0.3s, color 0.3s;
+  transition: all 0.3s;
 }
 
 .card {
@@ -164,13 +162,21 @@ const MAGIC = "ZTPv2-ZETA";
 const XOR_KEY = 0x9D;
 const DEFAULT_PWD = "123456";
 
-let darkMode = false;
+// 暗色模式记忆
+function loadTheme() {
+  const dark = localStorage.getItem("dark") === "1";
+  if (dark) document.documentElement.classList.add("dark");
+}
 
-document.getElementById("toggleTheme").onclick = () => {
-  darkMode = !darkMode;
-  document.body.style.background = darkMode ? "#1a1111" : "#fff0f0";
-};
+function toggleDark() {
+  const isDark = document.documentElement.classList.toggle("dark");
+  localStorage.setItem("dark", isDark ? "1" : "0");
+}
 
+loadTheme();
+document.getElementById("toggleTheme").onclick = toggleDark;
+
+// 功能代码
 function setBar(id, v) {
   document.getElementById(id).style.width = Math.min(100, v) + "%";
 }
@@ -189,7 +195,8 @@ function aesDecrypt(b64, pwd) {
   try {
     const d = CryptoJS.AES.decrypt(b64, pwd);
     return new Uint8Array(Array.from(d.words).flatMap(w => [
-      (w >>> 24) & 0xff, (w >>> 16) & 0xff, (w >>> 8) & 0xff, w & 0xff
+      (w >>> 24) & 0xff, (w >>> 16) & 0xff,
+      (w >>> 8) & 0xff, w & 0xff
     ]));
   } catch {
     throw new Error("密码错误");
