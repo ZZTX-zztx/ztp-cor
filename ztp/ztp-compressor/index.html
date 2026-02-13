@@ -150,8 +150,8 @@ body {
 
   <input class="pwd" id="zipPwd" placeholder="设置加密密码" type="password">
   <div class="area" id="zipArea">
-    <p>点击或拖放文件/文件夹</p>
-    <input type="file" id="zipFiles" multiple webkitdirectory>
+    <p>点击选择文件</p>
+    <input type="file" id="zipFiles" multiple>
   </div>
   <button class="btn" id="doZip">生成文件</button>
   <div class="progress"><div class="bar" id="zipBar"></div></div>
@@ -189,7 +189,6 @@ function toggleDark() {
 loadTheme();
 document.getElementById("toggleTheme").onclick = toggleDark;
 
-// 功能代码
 function setBar(id, v) {
   document.getElementById(id).style.width = Math.min(100, v) + "%";
 }
@@ -226,7 +225,7 @@ document.getElementById("doZip").onclick = async () => {
   setBar("zipBar", 20);
 
   const zip = new JSZip();
-  files.forEach(f => zip.file(f.webkitRelativePath || f.name, f));
+  files.forEach(f => zip.file(f.name, f));
   const bin = await zip.generateAsync({ type: "uint8array" });
   setBar("zipBar", 50);
 
@@ -293,4 +292,4 @@ document.getElementById("zipArea").onclick = () => document.getElementById("zipF
 document.getElementById("unzipArea").onclick = () => document.getElementById("unzipFile").click();
 </script>
 </body>
-    </html>
+</html>
