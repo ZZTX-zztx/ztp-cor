@@ -127,6 +127,13 @@ body {
   cursor: pointer;
   margin-bottom: 12px;
 }
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+}
 </style>
 </head>
 
@@ -135,12 +142,18 @@ body {
 
 <div class="card">
   <div class="title">🧧 新年版 ZTP 加密器</div>
+
+  <div class="row">
+    <input type="checkbox" id="useEncrypt" checked>
+    <label for="useEncrypt">启用加密（生成 .ztp）</label>
+  </div>
+
   <input class="pwd" id="zipPwd" placeholder="设置加密密码" type="password">
   <div class="area" id="zipArea">
     <p>点击或拖放文件/文件夹</p>
     <input type="file" id="zipFiles" multiple webkitdirectory>
   </div>
-  <button class="btn" id="doZip">生成 .ztp 加密包</button>
+  <button class="btn" id="doZip">生成文件</button>
   <div class="progress"><div class="bar" id="zipBar"></div></div>
   <div class="status" id="zipLog"></div>
 </div>
@@ -206,6 +219,7 @@ function aesDecrypt(b64, pwd) {
 document.getElementById("doZip").onclick = async () => {
   const files = Array.from(document.getElementById("zipFiles").files);
   const pwd = document.getElementById("zipPwd").value || DEFAULT_PWD;
+  const useEncrypt = document.getElementById("useEncrypt").checked;
   const log = document.getElementById("zipLog");
   if (!files.length) return log.textContent = "请选择文件";
   log.textContent = "打包中...";
@@ -215,6 +229,13 @@ document.getElementById("doZip").onclick = async () => {
   files.forEach(f => zip.file(f.webkitRelativePath || f.name, f));
   const bin = await zip.generateAsync({ type: "uint8array" });
   setBar("zipBar", 50);
+
+  if (!useEncrypt) {
+    saveAs(new Blob([bin]), "archive.zip");
+    setBar("zipBar", 100);
+    log.textContent = "✅ 打包完成（普通 ZIP）";
+    return;
+  }
 
   const aes = aesEncrypt(bin, pwd);
   const enc = xorBuf(new TextEncoder().encode(aes), XOR_KEY);
@@ -227,7 +248,7 @@ document.getElementById("doZip").onclick = async () => {
 
   saveAs(new Blob([out]), "加密文件.ztp");
   setBar("zipBar", 100);
-  log.textContent = "✅ 加密完成";
+  log.textContent = "✅ 加密完成（ZTP）";
 };
 
 document.getElementById("doUnzip").onclick = async () => {
@@ -272,4 +293,4 @@ document.getElementById("zipArea").onclick = () => document.getElementById("zipF
 document.getElementById("unzipArea").onclick = () => document.getElementById("unzipFile").click();
 </script>
 </body>
-</html>
+    </html>
