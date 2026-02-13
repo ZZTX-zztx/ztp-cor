@@ -12,4 +12,4 @@
 
 ### 彻底跳转链接
 
-[next](./ztp-compressor)
+[下一步](./ztp-compressor)
