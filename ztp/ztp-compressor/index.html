@@ -17,7 +17,6 @@
   --main: #d92c2c;
   --progress: #ffd6d6;
 }
-
 html.dark {
   --bg: #1a1111;
   --card: #2c1a1a;
@@ -27,14 +26,12 @@ html.dark {
   --main: #b32424;
   --progress: #442222;
 }
-
 * {
   margin: 0;
   padding: 0;
   box-sizing: border-box;
   font-family: system-ui, sans-serif;
 }
-
 body {
   background: var(--bg);
   color: var(--text);
@@ -43,7 +40,6 @@ body {
   margin: 0 auto;
   transition: all 0.3s;
 }
-
 .card {
   background: var(--card);
   border-radius: 16px;
@@ -51,14 +47,12 @@ body {
   margin-bottom: 16px;
   box-shadow: 0 4px 12px rgba(0,0,0,0.1);
 }
-
 .title {
   font-size: 18px;
   font-weight: 700;
   color: var(--main);
   margin-bottom: 12px;
 }
-
 .area {
   border: 2px dashed var(--border);
   border-radius: 12px;
@@ -68,11 +62,9 @@ body {
   margin-bottom: 12px;
   cursor: pointer;
 }
-
 .area input {
   display: none;
 }
-
 .btn {
   background: var(--main);
   color: #fff;
@@ -85,7 +77,6 @@ body {
   margin-top: 6px;
   cursor: pointer;
 }
-
 .pwd {
   width: 100%;
   padding: 10px 12px;
@@ -96,7 +87,6 @@ body {
   margin-bottom: 10px;
   outline: none;
 }
-
 .progress {
   height: 6px;
   background: var(--progress);
@@ -104,19 +94,16 @@ body {
   overflow: hidden;
   margin: 10px 0;
 }
-
 .bar {
   height: 100%;
   background: var(--main);
   width: 0;
   transition: width 0.2s;
 }
-
 .status {
   font-size: 14px;
   color: var(--muted);
 }
-
 .themeBtn {
   background: var(--card);
   color: var(--main);
@@ -127,7 +114,6 @@ body {
   cursor: pointer;
   margin-bottom: 12px;
 }
-
 .row {
   display: flex;
   align-items: center;
@@ -136,8 +122,8 @@ body {
 }
 </style>
 </head>
-
 <body>
+
 <button class="themeBtn" id="toggleTheme">切换暗色/亮色</button>
 
 <div class="card">
@@ -149,10 +135,12 @@ body {
   </div>
 
   <input class="pwd" id="zipPwd" placeholder="设置加密密码" type="password">
+  
   <div class="area" id="zipArea">
-    <p>点击选择文件</p>
-    <input type="file" id="zipFiles" multiple>
+    <p>选择文件 / 文件夹</p>
+    <input type="file" id="zipFiles" multiple webkitdirectory directory>
   </div>
+
   <button class="btn" id="doZip">生成文件</button>
   <div class="progress"><div class="bar" id="zipBar"></div></div>
   <div class="status" id="zipLog"></div>
@@ -175,34 +163,29 @@ const MAGIC = "ZTPv2-ZETA";
 const XOR_KEY = 0x9D;
 const DEFAULT_PWD = "123456";
 
-// 暗色模式记忆
+// 暗色记忆
 function loadTheme() {
   const dark = localStorage.getItem("dark") === "1";
   if (dark) document.documentElement.classList.add("dark");
 }
-
 function toggleDark() {
   const isDark = document.documentElement.classList.toggle("dark");
   localStorage.setItem("dark", isDark ? "1" : "0");
 }
-
 loadTheme();
 document.getElementById("toggleTheme").onclick = toggleDark;
 
 function setBar(id, v) {
   document.getElementById(id).style.width = Math.min(100, v) + "%";
 }
-
 function xorBuf(buf, key) {
   const u = new Uint8Array(buf);
-  for (let i = 0; i < u.length; i++) u[i] ^= key;
+  for (let i=0; i<u.length; i++) u[i] ^= key;
   return u;
 }
-
 function aesEncrypt(data, pwd) {
   return CryptoJS.AES.encrypt(CryptoJS.lib.WordArray.create(data), pwd).toString();
 }
-
 function aesDecrypt(b64, pwd) {
   try {
     const d = CryptoJS.AES.decrypt(b64, pwd);
@@ -215,17 +198,21 @@ function aesDecrypt(b64, pwd) {
   }
 }
 
+// 上传
 document.getElementById("doZip").onclick = async () => {
   const files = Array.from(document.getElementById("zipFiles").files);
   const pwd = document.getElementById("zipPwd").value || DEFAULT_PWD;
   const useEncrypt = document.getElementById("useEncrypt").checked;
   const log = document.getElementById("zipLog");
-  if (!files.length) return log.textContent = "请选择文件";
+  if (!files.length) return log.textContent = "请选择文件或文件夹";
   log.textContent = "打包中...";
   setBar("zipBar", 20);
 
   const zip = new JSZip();
-  files.forEach(f => zip.file(f.name, f));
+  files.forEach(f => {
+    const path = f.webkitRelativePath || f.name;
+    zip.file(path, f);
+  });
   const bin = await zip.generateAsync({ type: "uint8array" });
   setBar("zipBar", 50);
 
@@ -250,6 +237,7 @@ document.getElementById("doZip").onclick = async () => {
   log.textContent = "✅ 加密完成（ZTP）";
 };
 
+// 解密
 document.getElementById("doUnzip").onclick = async () => {
   const file = document.getElementById("unzipFile").files[0];
   const pwd = document.getElementById("unzipPwd").value || DEFAULT_PWD;
@@ -292,4 +280,4 @@ document.getElementById("zipArea").onclick = () => document.getElementById("zipF
 document.getElementById("unzipArea").onclick = () => document.getElementById("unzipFile").click();
 </script>
 </body>
-</html>
+      </html>
