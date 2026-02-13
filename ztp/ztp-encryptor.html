@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>ZTP 加密压缩器</title>
+<script src="https://unpkg.com/jszip@3.10.1/dist/jszip.min.js"></script>
+<script src="https://unpkg.com/file-saver@2.0.5/dist/FileSaver.min.js"></script>
+<script src="https://unpkg.com/crypto-js@4.2.0/crypto-js.min.js"></script>
+<style>
+:root {
+    --bg: #f6f7fb;
+    --card: #fff;
+    --text: #222;
+    --gray: #666;
+    --border: #ccc;
+    --accent: #4a6cf7;
+    --progress: #e1e7ff;
+}
+.dark {
+    --bg: #0f111a;
+    --card: #1a1c2c;
+    --text: #e6e9ef;
+    --gray: #aab1cf;
+    --border: #444;
+    --accent: #5a79ff;
+    --progress: #2d3757;
+}
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: system-ui, sans-serif;
+}
+body {
+    background: var(--bg);
+    color: var(--text);
+    padding: 20px;
+    max-width: 500px;
+    margin: 0 auto;
+    transition: .2s;
+}
+.card {
+    background: var(--card);
+    border-radius: 16px;
+    padding: 20px;
+    margin-bottom: 16px;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.1);
+}
+.title {
+    font-size: 18px;
+    font-weight: 600;
+    margin-bottom: 12px;
+}
+.area {
+    border: 2px dashed var(--border);
+    border-radius: 12px;
+    padding: 28px 10px;
+    text-align: center;
+    cursor: pointer;
+    margin-bottom: 12px;
+}
+.area:hover {
+    border-color: var(--accent);
+}
+.area input { display: none; }
+.btn {
+    background: var(--accent);
+    color: #fff;
+    border: none;
+    border-radius: 10px;
+    padding: 12px;
+    width: 100%;
+    font-size: 15px;
+    font-weight: 500;
+    margin: 6px 0;
+}
+.btn:active { opacity: .8; }
+.status {
+    font-size: 14px;
+    color: var(--gray);
+    margin-top: 8px;
+}
+input.pwd {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    background: var(--card);
+    color: var(--text);
+    margin-bottom: 10px;
+    outline: none;
+}
+.progress {
+    height: 6px;
+    background: var(--progress);
+    border-radius: 3px;
+    overflow: hidden;
+    margin: 10px 0;
+}
+.bar {
+    height: 100%;
+    background: var(--accent);
+    width: 0%;
+    transition: width .2s;
+}
+.theme {
+    text-align: right;
+    margin-bottom: 10px;
+}
+.theme button {
+    background: none;
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 6px 10px;
+    border-radius: 8px;
+    cursor: pointer;
+}
+</style>
+</head>
+<body>
+
+<div class="theme">
+    <button id="toggleTheme">切换主题</button>
+</div>
+
+<div class="card">
+    <div class="title">📦 ZTP 加密打包</div>
+    <input class="pwd" id="zipPwd" placeholder="设置加密密码" type="password">
+    <div class="area" id="zipArea">
+        <p>点击或拖放文件/文件夹</p>
+        <input type="file" id="zipFiles" multiple webkitdirectory>
+    </div>
+    <button class="btn" id="doZip">生成 .ztp 加密包</button>
+    <div class="progress"><div class="bar" id="zipBar"></div></div>
+    <div class="status" id="zipLog"></div>
+</div>
+
+<div class="card">
+    <div class="title">📂 ZTP 解密解压</div>
+    <input class="pwd" id="unzipPwd" placeholder="输入解密密码" type="password">
+    <div class="area" id="unzipArea">
+        <p>选择 .ztp 文件</p>
+        <input type="file" id="unzipFile" accept=".ztp">
+    </div>
+    <button class="btn" id="doUnzip">解密并解压</button>
+    <div class="progress"><div class="bar" id="unzipBar"></div></div>
+    <div class="status" id="unzipLog"></div>
+</div>
+
+<script>
+// ========== 你可以自定义这 3 个字段 ==========
+const MAGIC = "ZTPv2-ZETA";
+const XOR_KEY = 0x9D;
+const DEFAULT_PWD = "123456";
+// ==========================================
+
+let dark = false;
+document.getElementById('toggleTheme').onclick = () => {
+    dark = !dark;
+    document.body.classList.toggle('dark', dark);
+};
+
+function setBar(id, v) {
+    document.getElementById(id).style.width = Math.min(100, v) + '%';
+}
+
+function xorBuf(buf, key) {
+    const u = new Uint8Array(buf);
+    for (let i=0; i<u.length; i++) u[i] ^= key;
+    return u;
+}
+
+function aesEncrypt(data, pwd) {
+    return CryptoJS.AES.encrypt(
+        CryptoJS.lib.WordArray.create(data),
+        pwd
+    ).toString();
+}
+
+function aesDecrypt(b64, pwd) {
+    try {
+        const dec = CryptoJS.AES.decrypt(b64, pwd);
+        return new Uint8Array(
+            Array.from(dec.words).map(w => [
+                (w >>> 24) & 0xff, (w >>> 16) & 0xff,
+                (w >>> 8) & 0xff, w & 0xff
+            ]).flat()
+        );
+    } catch (e) {
+        throw new Error("密码错误");
+    }
+}
+
+// 压缩加密
+document.getElementById('doZip').onclick = async () => {
+    const files = Array.from(document.getElementById('zipFiles').files);
+    const pwd = document.getElementById('zipPwd').value || DEFAULT_PWD;
+    const log = document.getElementById('zipLog');
+    if (files.length === 0) return log.textContent = '请选择文件';
+    log.textContent = '打包中...';
+    setBar('zipBar', 20);
+
+    const zip = new JSZip();
+    for (const f of files) {
+        zip.file(f.webkitRelativePath || f.name, f);
+    }
+    const bin = await zip.generateAsync({ type: 'uint8array' });
+    setBar('zipBar', 50);
+
+    const aes = aesEncrypt(bin, pwd);
+    const enc = xorBuf(new TextEncoder().encode(aes), XOR_KEY);
+    setBar('zipBar', 80);
+
+    const head = new TextEncoder().encode(MAGIC);
+    const out = new Uint8Array(head.length + enc.length);
+    out.set(head);
+    out.set(enc, head.length);
+
+    saveAs(new Blob([out]), "archive.ztp");
+    setBar('zipBar', 100);
+    log.textContent = '✅ ZTP 加密完成';
+};
+
+// 解密解压
+document.getElementById('doUnzip').onclick = async () => {
+    const file = document.getElementById('unzipFile').files[0];
+    const pwd = document.getElementById('unzipPwd').value || DEFAULT_PWD;
+    const log = document.getElementById('unzipLog');
+    if (!file) return log.textContent = '请选择 .ztp 文件';
+    log.textContent = '校验中...';
+    setBar('unzipBar', 20);
+
+    const buf = await file.arrayBuffer();
+    const arr = new Uint8Array(buf);
+    const mlen = MAGIC.length;
+
+    const magic = new TextDecoder().decode(arr.slice(0, mlen));
+    if (magic !== MAGIC) return log.textContent = '❌ 不是合法 ZTP';
+
+    log.textContent = '解密中...';
+    setBar('unzipBar', 40);
+    const xor = xorBuf(arr.slice(mlen), XOR_KEY);
+    const b64 = new TextDecoder().decode(xor);
+
+    let dec;
+    try {
+        dec = aesDecrypt(b64, pwd);
+    } catch (e) {
+        log.textContent = '❌ 密码错误';
+        return;
+    }
+
+    setBar('unzipBar', 70);
+    const zip = new JSZip();
+    const arch = await zip.loadAsync(dec);
+
+    for (const n in arch.files) {
+        if (!arch.files[n].dir) {
+            const blob = await arch.files[n].async('blob');
+            saveAs(blob, n);
+        }
+    }
+    setBar('unzipBar', 100);
+    log.textContent = '✅ 解密解压完成';
+};
+
+// 拖放
+function bind(areaId, inpId) {
+    const a = document.getElementById(areaId);
+    const i = document.getElementById(inpId);
+    a.onclick = () => i.click();
+    a.ondragover = e => e.preventDefault();
+    a.ondrop = e => {
+        e.preventDefault();
+        i.files = e.dataTransfer.files;
+    };
+}
+bind('zipArea', 'zipFiles');
+bind('unzipArea', 'unzipFile');
+</script>
+</body>
+</html>
