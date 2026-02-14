@@ -135,7 +135,10 @@ body {
   </div>
 
   <input class="pwd" id="zipPwd" placeholder="设置密码（可选）" type="password">
-  
+
+  <!-- 自定义文件名输入框 -->
+  <input class="pwd" id="fileName" placeholder="自定义文件名（可选，无需输.ztp）">
+
   <div class="area" id="zipArea">
     <p id="zipText">选择文件 / 文件夹</p>
     <input type="file" id="zipFiles" multiple webkitdirectory directory>
@@ -177,13 +180,13 @@ document.getElementById("toggleTheme").onclick = toggleDark;
 // 选择文件显示名称
 document.getElementById("zipFiles").addEventListener("change", () => {
   const f = document.getElementById("zipFiles");
-  document.getElementById("zipText").textContent = 
+  document.getElementById("zipText").textContent =
     f.files.length ? `已选：${f.files.length} 项` : "选择文件 / 文件夹";
 });
 
 document.getElementById("unzipFile").addEventListener("change", () => {
   const f = document.getElementById("unzipFile");
-  document.getElementById("unzipText").textContent = 
+  document.getElementById("unzipText").textContent =
     f.files[0] ? `已选：${f.files[0].name}` : "选择 .ztp 文件";
 });
 
@@ -210,11 +213,12 @@ function aesDecrypt(b64, pwd) {
   }
 }
 
-// 生成 ZTP（修复：勾选密码但没输入 → 禁止打包）
+// 生成 ZTP
 document.getElementById("doZip").onclick = async () => {
   const files = Array.from(document.getElementById("zipFiles").files);
   const usePwd = document.getElementById("usePassword").checked;
   const pwd = document.getElementById("zipPwd").value.trim();
+  const fileNameInput = document.getElementById("fileName").value.trim();
   const log = document.getElementById("zipLog");
 
   if (files.length === 0) {
@@ -222,7 +226,6 @@ document.getElementById("doZip").onclick = async () => {
     return;
   }
 
-  // 🔴 关键修复：勾选了密码但没填 → 提示并停止
   if (usePwd && pwd === "") {
     log.textContent = "❌ 请输入密码";
     setBar("zipBar", 0);
@@ -253,7 +256,13 @@ document.getElementById("doZip").onclick = async () => {
   out.set(head);
   out.set(finalData, head.length);
 
-  saveAs(new Blob([out]), "archive.ztp");
+  // 文件名逻辑：不填用默认，填了就用你的名字 + .ztp
+  let saveName = "archive.ztp";
+  if (fileNameInput !== "") {
+    saveName = fileNameInput.replace(/\.ztp$/i, "") + ".ztp";
+  }
+
+  saveAs(new Blob([out]), saveName);
   setBar("zipBar", 100);
   log.textContent = usePwd ? "✅ 带密码 ZTP 完成" : "✅ 无密码 ZTP 完成";
 };
@@ -312,4 +321,4 @@ document.getElementById("zipArea").onclick = () => document.getElementById("zipF
 document.getElementById("unzipArea").onclick = () => document.getElementById("unzipFile").click();
 </script>
 </body>
-  </html>
+</html>
